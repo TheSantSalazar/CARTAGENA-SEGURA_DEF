@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -85,5 +86,38 @@ public class AuthService {
         String token = jwtUtil.generateToken(user);
         Set<String> roles = user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
         return new AuthResponse(token, user.getUsername(), user.getFullName(), user.getEmail(), user.getPhone(), roles);
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new RuntimeException("No existe un usuario asociado a este correo"));
+
+        String token = UUID.randomUUID().toString();
+        user.setResetToken(token);
+        user.setResetTokenExpiration(LocalDateTime.now().plusHours(1));
+        userRepository.save(user);
+
+        String resetUrl = "https://cartagena-segura.vercel.app/ResetPassword?token=" + token;
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), resetUrl);
+        
+        logService.log("FORGOT_PASSWORD", user.getUsername(), "Solicitud de restablecimiento de contraseña", "User", null);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByResetToken(request.token())
+                .orElseThrow(() -> new RuntimeException("Token de restablecimiento inválido"));
+
+        if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("El token ha expirado");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpiration(null);
+        userRepository.save(user);
+
+        logService.log("RESET_PASSWORD", user.getUsername(), "Contraseña restablecida exitosamente", "User", null);
     }
 }

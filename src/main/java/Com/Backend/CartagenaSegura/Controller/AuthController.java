@@ -72,4 +72,18 @@ public class AuthController {
                 httpRequest.getRemoteAddr(), httpRequest.getHeader("User-Agent"));
         return ResponseEntity.ok(ApiResponse.ok("Login exitoso", response));
     }
+
+    @PostMapping("/ForgotPassword")
+    @Operation(summary = "Solicitar restablecimiento de contraseña", description = "Envía un correo con un token de un solo uso.")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok("Se ha enviado un enlace de recuperación a tu correo", null));
+    }
+
+    @PostMapping("/ResetPassword")
+    @Operation(summary = "Restablecer contraseña", description = "Usa el token recibido por correo para establecer una nueva contraseña.")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok("Tu contraseña ha sido restablecida con éxito", null));
+    }
 }

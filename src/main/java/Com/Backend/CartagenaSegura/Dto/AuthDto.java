@@ -24,5 +24,11 @@ public class AuthDto {
             java.util.Set<String> roles
     ) {}
 
+    // ---- REQUEST: Olvidé mi contraseña ----
+    public record ForgotPasswordRequest(String email) {}
+
+    // ---- REQUEST: Restablecer contraseña ----
+    public record ResetPasswordRequest(String token, String newPassword) {}
+
 } 
 

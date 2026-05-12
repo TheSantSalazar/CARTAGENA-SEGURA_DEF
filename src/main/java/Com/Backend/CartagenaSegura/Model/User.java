@@ -41,6 +41,10 @@ public class User implements UserDetails {
 
     private LocalDateTime lastLogin;
 
+    private String resetToken;
+
+    private LocalDateTime resetTokenExpiration;
+
     // Relacion muchos a muchos con Role
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -81,6 +85,12 @@ public class User implements UserDetails {
 
     public Set<Role> getRoles() { return roles; }
     public void setRoles(Set<Role> roles) { this.roles = roles; }
+
+    public String getResetToken() { return resetToken; }
+    public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+
+    public LocalDateTime getResetTokenExpiration() { return resetTokenExpiration; }
+    public void setResetTokenExpiration(LocalDateTime resetTokenExpiration) { this.resetTokenExpiration = resetTokenExpiration; }
 
     @Override
     public String getUsername() { return username; }

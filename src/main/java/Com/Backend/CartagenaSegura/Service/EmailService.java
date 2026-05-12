@@ -24,6 +24,9 @@ public class EmailService {
     @Value("${apps.script.url}")
     private String appsScriptUrl;
 
+    @Value("${app.base-url:https://cartagena-segura-production.up.railway.app}")
+    private String apiBaseUrl;
+
     public EmailService(TemplateEngine templateEngine, ObjectMapper objectMapper) {
         this.templateEngine = templateEngine;
         this.objectMapper = objectMapper;
@@ -38,6 +41,7 @@ public class EmailService {
             context.setVariable("fullName",     fullName != null ? fullName : username);
             context.setVariable("registeredAt", LocalDateTime.now());
             context.setVariable("appUrl",       "https://cartagena-segura.vercel.app");
+            context.setVariable("apiUrl",       apiBaseUrl);
 
             // Se genera el HTML desde la plantilla
             String html = templateEngine.process("EmailBienvenida", context);
@@ -71,6 +75,46 @@ public class EmailService {
 
         } catch (Exception e) {
             System.err.println("Error delegando email a Google Apps Script para " + to + ": " + e.getMessage());
+        }
+    }
+    @Async
+    public void sendPasswordResetEmail(String to, String username, String resetUrl) {
+        try {
+            Context context = new Context();
+            context.setVariable("username", username);
+            context.setVariable("resetUrl", resetUrl);
+            context.setVariable("appUrl",   "https://cartagena-segura.vercel.app");
+            context.setVariable("apiUrl",   apiBaseUrl);
+
+            String html = templateEngine.process("EmailResetPassword", context);
+
+            Map<String, String> payload = new HashMap<>();
+            payload.put("to", to);
+            payload.put("subject", "Restablecer Contraseña - Cartagena Segura");
+            payload.put("html", html);
+
+            String requestBody = objectMapper.writeValueAsString(payload);
+
+            HttpClient client = HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.ALWAYS)
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(appsScriptUrl))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200 || response.statusCode() == 302) {
+                System.out.println("Email de restablecimiento delegado existosamente para: " + to);
+            } else {
+                System.err.println("Google Script (Reset) retornó código HTTP: " + response.statusCode());
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error delegando email de restablecimiento para " + to + ": " + e.getMessage());
         }
     }
 }
