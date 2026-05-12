@@ -24,6 +24,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final LogService logService;
     private final EmailService emailService;
+    @Value("${app.frontend-url:https://cartagena-segura.vercel.app}")
+    private String frontendUrl;
 
     public AuthService(UserRepository userRepository,
                        RoleRepository roleRepository,
@@ -91,14 +93,22 @@ public class AuthService {
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("No existe un usuario asociado a este correo"));
+                .orElseThrow(() -> new IllegalArgumentException("No existe un usuario asociado a este correo"));
 
         String token = UUID.randomUUID().toString();
         user.setResetToken(token);
         user.setResetTokenExpiration(LocalDateTime.now().plusHours(1));
         userRepository.save(user);
 
-        String resetUrl = "https://cartagena-segura.vercel.app/ResetPassword?token=" + token;
+        String resetUrl = frontendUrl + "/ResetPassword?token=" + token;
+        String localUrl = "http://localhost:3000/ResetPassword?token=" + token;
+        
+        // DEBUG: Imprimir en consola para pruebas locales
+        System.out.println("\n=========================================================");
+        System.out.println("RECOVERY LINK (DEBUG): " + localUrl);
+        System.out.println("PRODUCTION LINK: " + resetUrl);
+        System.out.println("=========================================================\n");
+
         emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), resetUrl);
         
         logService.log("FORGOT_PASSWORD", user.getUsername(), "Solicitud de restablecimiento de contraseña", "User", null);
@@ -107,10 +117,10 @@ public class AuthService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         User user = userRepository.findByResetToken(request.token())
-                .orElseThrow(() -> new RuntimeException("Token de restablecimiento inválido"));
+                .orElseThrow(() -> new IllegalArgumentException("El token de recuperación no es válido o ya fue usado"));
 
         if (user.getResetTokenExpiration().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("El token ha expirado");
+            throw new IllegalArgumentException("El enlace ha expirado (validez de 60 min). Solicita uno nuevo.");
         }
 
         user.setPassword(passwordEncoder.encode(request.newPassword()));
