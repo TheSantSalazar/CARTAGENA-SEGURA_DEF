@@ -2,6 +2,14 @@
 
 Sistema de gestión y seguridad ciudadana para la ciudad de Cartagena. Esta documentación corresponde a la configuración del entorno de desarrollo **local**.
 
+## Documentación del código
+
+La explicación completa del backend está en:
+
+* [docs/backend-documentacion.md](docs/backend-documentacion.md)
+
+Ahí se explica la arquitectura, carpetas, seguridad JWT, bases de datos, servicios, modelos, endpoints y flujos principales para que cualquier persona pueda entender cómo funciona el código.
+
 ## Requisitos
 * Java 21
 * Maven 3.x
